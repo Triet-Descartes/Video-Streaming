@@ -1,3 +1,4 @@
+from email import header
 import sys
 from time import time
 HEADER_SIZE = 12
@@ -17,11 +18,31 @@ class RtpPacket:
 		#--------------
 		# Fill the header bytearray with RTP header fields
 		
-		# header[0] = ...
-		# ...
+		# Byte 0: Version (2 bits), Padding (1 bit), Extension (1 bit), CC (4 bits)
+		header[0] = (version << 6) | (padding << 5) | (extension << 4) | (cc & 0x0F)
+
+    	# Byte 1: Marker (1 bit), Payload Type (7 bits)
+		header[1] = (marker << 7) | (pt & 0x7F)
+
+    	# Bytes 2-3: Sequence Number
+		header[2] = (seqnum >> 8) & 0xFF
+		header[3] = seqnum & 0xFF
+
+		# Bytes 4-7: Timestamp
+		header[4] = (timestamp >> 24) & 0xFF
+		header[5] = (timestamp >> 16) & 0xFF
+		header[6] = (timestamp >> 8) & 0xFF
+		header[7] = timestamp & 0xFF
+
+		# Bytes 8-11: SSRC
+		header[8]  = (ssrc >> 24) & 0xFF
+		header[9]  = (ssrc >> 16) & 0xFF
+		header[10] = (ssrc >> 8) & 0xFF
+		header[11] = ssrc & 0xFF
 		
 		# Get the payload from the argument
-		# self.payload = ...
+		self.payload = payload
+		self.header = header
 		
 	def decode(self, byteStream):
 		"""Decode the RTP packet."""

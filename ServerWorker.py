@@ -36,6 +36,7 @@ class ServerWorker:
 				print("Data received:\n" + data.decode("utf-8"))
 				self.processRtspRequest(data.decode("utf-8"))
 	
+	# Xử lý các yêu cầu RTSP từ client ví dụ như SETUP, PLAY, PAUSE, TEARDOWN
 	def processRtspRequest(self, data):
 		"""Process RTSP request sent from the client."""
 		# Get the request type

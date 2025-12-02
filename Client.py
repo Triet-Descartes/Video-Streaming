@@ -21,7 +21,7 @@ class Client:
 	
 	# Initiation..
 	def __init__(self, master, serveraddr, serverport, rtpport, filename):
-		self.master = master
+		self.master = master 
 		self.master.protocol("WM_DELETE_WINDOW", self.handler)
 		self.createWidgets()
 		self.serverAddr = serveraddr
@@ -40,25 +40,25 @@ class Client:
 		# Create Setup button
 		self.setup = Button(self.master, width=20, padx=3, pady=3)
 		self.setup["text"] = "Setup"
-		self.setup["command"] = self.setupMovie
+		self.setup["command"] = self.setupMovie # Gọi hàm setupMovie khi nhấn nút Setup
 		self.setup.grid(row=1, column=0, padx=2, pady=2)
 		
 		# Create Play button		
 		self.start = Button(self.master, width=20, padx=3, pady=3)
 		self.start["text"] = "Play"
-		self.start["command"] = self.playMovie
+		self.start["command"] = self.playMovie # Gọi hàm playMovie khi nhấn nút Play
 		self.start.grid(row=1, column=1, padx=2, pady=2)
 		
 		# Create Pause button			
 		self.pause = Button(self.master, width=20, padx=3, pady=3)
 		self.pause["text"] = "Pause"
-		self.pause["command"] = self.pauseMovie
+		self.pause["command"] = self.pauseMovie # Gọi hàm pauseMovie khi nhấn nút Pause
 		self.pause.grid(row=1, column=2, padx=2, pady=2)
 		
 		# Create Teardown button
 		self.teardown = Button(self.master, width=20, padx=3, pady=3)
 		self.teardown["text"] = "Teardown"
-		self.teardown["command"] =  self.exitClient
+		self.teardown["command"] =  self.exitClient # Gọi hàm exitClient khi nhấn nút Teardown
 		self.teardown.grid(row=1, column=3, padx=2, pady=2)
 		
 		# Create a label to display the movie
@@ -140,6 +140,10 @@ class Client:
 		except:
 			tkMessageBox.showwarning('Connection Failed', 'Connection to \'%s\' failed.' %self.serverAddr)
 	
+	# Hàm này sẽ xây dựng và gửi yêu cầu RTSP tương ứng đến server
+	# Yêu cầu RTSP có thể là SETUP, PLAY, PAUSE, TEARDOWN
+	# Loại yêu cầu được xác định bởi tham số requestCode
+	# Được dùng trong hàm setupMovie, playMovie, pauseMovie, exitClient
 	def sendRtspRequest(self, requestCode):
 		"""Send RTSP request to the server."""	
 		#-------------
@@ -147,64 +151,76 @@ class Client:
 		#-------------
 		
 		# Setup request
+		# Yêu cầu SETUP từ client đến server nhằm thiết lập phiên RTSP và chuẩn bị nhận dữ liệu RTP
 		if requestCode == self.SETUP and self.state == self.INIT:
 			threading.Thread(target=self.recvRtspReply).start()
 			# Update RTSP sequence number.
-			# ...
+			self.rtspSeq += 1
 			
 			# Write the RTSP request to be sent.
-			# request = ...
+			request = 	f"SETUP {self.fileName} RTSP/1.0\n" \
+				  		f"CSeq: {self.rtspSeq}\n" \
+				  		f"Transport: RTP/UDP; client_port= {self.rtpPort}"
 			
 			# Keep track of the sent request.
-			# self.requestSent = ...
+			self.requestSent = self.SETUP
 		
 		# Play request
+		# Yêu cầu PLAY từ client đến server nhằm bắt đầu truyền dữ liệu RTP
 		elif requestCode == self.PLAY and self.state == self.READY:
 			# Update RTSP sequence number.
-			# ...
+			self.rtspSeq += 1
 			
 			# Write the RTSP request to be sent.
-			# request = ...
-			
+			request = 	f"PLAY {self.fileName} RTSP/1.0\n" \
+				  		f"CSeq: {self.rtspSeq}\n" \
+				  		f"Session: {self.sessionId}"
+
 			# Keep track of the sent request.
-			# self.requestSent = ...
+			self.requestSent = self.PLAY
 		
 		# Pause request
+		# Yêu cầu PAUSE từ client đến server nhằm tạm dừng truyền dữ liệu RTP
 		elif requestCode == self.PAUSE and self.state == self.PLAYING:
 			# Update RTSP sequence number.
-			# ...
+			self.rtspSeq += 1
 			
 			# Write the RTSP request to be sent.
-			# request = ...
+			request = 	f"PAUSE {self.fileName} RTSP/1.0\n" \
+				  		f"CSeq: {self.rtspSeq}\n" \
+				  		f"Session: {self.sessionId}"
 			
 			# Keep track of the sent request.
-			# self.requestSent = ...
+			self.requestSent = self.PAUSE
 			
 		# Teardown request
+		# Yêu cầu TEARDOWN từ client đến server nhằm kết thúc phiên RTSP và dừng truyền dữ liệu RTP
 		elif requestCode == self.TEARDOWN and not self.state == self.INIT:
 			# Update RTSP sequence number.
-			# ...
+			self.rtspSeq += 1
 			
 			# Write the RTSP request to be sent.
-			# request = ...
+			request = 	f"TEARDOWN {self.fileName} RTSP/1.0\n" \
+				  		f"CSeq: {self.rtspSeq}\n" \
+				  		f"Session: {self.sessionId}"
 			
 			# Keep track of the sent request.
-			# self.requestSent = ...
+			self.requestSent = self.TEARDOWN
 		else:
 			return
 		
 		# Send the RTSP request using rtspSocket.
-		# ...
+		self.rtspSocket.send(request.encode())
 		
 		print('\nData sent:\n' + request)
 	
 	def recvRtspReply(self):
 		"""Receive RTSP reply from the server."""
 		while True:
-			reply = self.rtspSocket.recv(1024)
+			reply = self.rtspSocket.recv(1024) # Reply có kiểu dữ liệu byte
 			
 			if reply: 
-				self.parseRtspReply(reply.decode("utf-8"))
+				self.parseRtspReply(reply.decode("utf-8")) # reply.decode("utf-8") dùng để giải mã dữ liệu byte nhận được thành chuỗi ký tự UTF-8
 			
 			# Close the RTSP socket upon requesting Teardown
 			if self.requestSent == self.TEARDOWN:
@@ -215,7 +231,7 @@ class Client:
 	def parseRtspReply(self, data):
 		"""Parse the RTSP reply from the server."""
 		lines = data.split('\n')
-		seqNum = int(lines[1].split(' ')[1])
+		seqNum = int(lines[1].split(' ')[1]) # RTSP sequence number trong phản hồi từ server
 		
 		# Process only if the server reply's sequence number is the same as the request's
 		if seqNum == self.rtspSeq:
